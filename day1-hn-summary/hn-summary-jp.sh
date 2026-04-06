@@ -9,7 +9,26 @@
 # Usage:
 #   ./hn-summary-jp.sh [number_of_articles]
 
-set -euo pipefail
+set -uo pipefail
+
+# --- Help ---
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+  cat <<'USAGE'
+Usage: ./hn-summary-jp.sh [number_of_articles]
+
+Fetches top Hacker News articles, extracts key sentences, and translates to Japanese.
+Output is saved as a timestamped file in the script's directory.
+
+Arguments:
+  number_of_articles  Number of articles to summarize (default: 5)
+
+Options:
+  -h, --help          Show this help message
+
+Requirements: curl, jq, python3
+USAGE
+  exit 0
+fi
 
 # --- Configuration ---
 NUM_ARTICLES="${1:-5}"
@@ -30,7 +49,12 @@ done
 
 # Fetch JSON from a URL
 fetch_json() {
-  curl -sf "$1"
+  local result
+  result=$(curl -sf --max-time 10 "$1" 2>/dev/null) || {
+    echo "Error: Failed to fetch $1" >&2
+    return 1
+  }
+  echo "$result"
 }
 
 # Extract readable text from HTML using Python
@@ -120,14 +144,25 @@ echo ""
 
 # 1. Fetch top story IDs
 echo "記事を取得中..." >&2
-top_ids=$(fetch_json "${HN_API}/topstories.json" | jq -r ".[:${NUM_ARTICLES}][]")
+top_ids=$(fetch_json "${HN_API}/topstories.json" | jq -r ".[:${NUM_ARTICLES}][]" 2>/dev/null)
+if [[ -z "$top_ids" ]]; then
+  echo "Error: Failed to fetch top stories from HN API." >&2
+  exit 1
+fi
 
 article_num=0
 for id in $top_ids; do
   article_num=$((article_num + 1))
 
   # 2. Fetch story details
+  sleep 1
   item_json=$(fetch_json "${HN_API}/item/${id}.json")
+  if [[ -z "$item_json" ]]; then
+    echo "----------------------------------------"
+    echo "【${article_num}】(記事の取得に失敗しました - ID: ${id})"
+    echo ""
+    continue
+  fi
   title=$(echo "$item_json" | jq -r '.title // "タイトルなし"')
   url=$(echo "$item_json" | jq -r '.url // empty')
   score=$(echo "$item_json" | jq -r '.score // 0')
@@ -138,7 +173,10 @@ for id in $top_ids; do
   # 3. Fetch article body (skip if no URL, e.g. Ask HN)
   body=""
   if [[ -n "$url" ]]; then
-    body=$(fetch_article_text "$url" 2>/dev/null) || body=""
+    body=$(fetch_article_text "$url" 2>/dev/null) || {
+      echo "  Warning: Could not fetch article body for ${url}" >&2
+      body=""
+    }
   fi
 
   # 4. Extract summary sentences

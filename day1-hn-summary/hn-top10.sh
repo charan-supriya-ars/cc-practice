@@ -6,7 +6,7 @@
 # Requirements: curl, jq
 # Usage: ./hn-top10.sh
 
-set -euo pipefail
+set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 OUTPUT_FILE="${SCRIPT_DIR}/hn-top10-$(date '+%Y%m%d-%H%M%S').txt"
@@ -26,12 +26,21 @@ done
   echo "========================================"
   echo ""
 
-  top_ids=$(curl -sf "${HN_API}/topstories.json" | jq -r '.[:10][]')
+  top_ids=$(curl -sf --max-time 10 "${HN_API}/topstories.json" 2>/dev/null | jq -r '.[:10][]' 2>/dev/null)
+  if [[ -z "$top_ids" ]]; then
+    echo "Error: Failed to fetch top stories from HN API." >&2
+    exit 1
+  fi
 
   rank=0
   for id in $top_ids; do
     rank=$((rank + 1))
-    item=$(curl -sf "${HN_API}/item/${id}.json")
+    sleep 1
+    item=$(curl -sf --max-time 10 "${HN_API}/item/${id}.json" 2>/dev/null) || {
+      echo "  ${rank}. [ID: ${id}] (Failed to fetch article details)"
+      echo ""
+      continue
+    }
     title=$(echo "$item" | jq -r '.title // "N/A"')
     score=$(echo "$item" | jq -r '.score // 0')
     url=$(echo "$item" | jq -r '.url // "N/A"')
