@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl --version)",
+      "Bash(jq --version)",
+      "Bash(sudo apt:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(time curl:*)",
+      "Bash(time ./hn-summary-jp.sh 2:*)",
+      "Bash(chmod +x:*)"
+    ]
+  }
+}
