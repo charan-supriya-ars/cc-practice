@@ -7,7 +7,15 @@
       "WebFetch(domain:github.com)",
       "Bash(time curl:*)",
       "Bash(time ./hn-summary-jp.sh 2:*)",
-      "Bash(chmod +x:*)"
+      "Bash(chmod +x:*)",
+      "Bash(npx --version)",
+      "Bash(npm install:*)",
+      "Bash(curl -fsSL https://deb.nodesource.com/setup_22.x)",
+      "Bash(sudo -E bash -)",
+      "Bash(curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh)",
+      "Bash(bash)",
+      "Bash(npx vitest *)"
     ]
-  }
+  },
+  "prefersReducedMotion": false
 }
